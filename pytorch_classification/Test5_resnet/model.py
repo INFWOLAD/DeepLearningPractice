@@ -2,17 +2,18 @@ import torch.nn as nn
 import torch
 
 
-class BasicBlock(nn.Module):
-    expansion = 1
+class BasicBlock(nn.Module):  # 18层、34层 残差结构定义
+    expansion = 1  # 对应分支的卷积核个数有没有变化
 
-    def __init__(self, in_channel, out_channel, stride=1, downsample=None, **kwargs):
+    def __init__(self, in_channel, out_channel, stride=1, downsample=None, **kwargs):  # 下采样参数对应虚线
         super(BasicBlock, self).__init__()
-        self.conv1 = nn.Conv2d(in_channels=in_channel, out_channels=out_channel,
-                               kernel_size=3, stride=stride, padding=1, bias=False)
-        self.bn1 = nn.BatchNorm2d(out_channel)
+        self.conv1 = nn.Conv2d(in_channels=in_channel, out_channels=out_channel,  # 对应卷积核个数
+                               kernel_size=3, stride=stride, padding=1, bias=False)  # stride为1则对应实线结构，为2则对应虚线结构
+        self.bn1 = nn.BatchNorm2d(out_channel)  # BN层，用来标准化
         self.relu = nn.ReLU()
         self.conv2 = nn.Conv2d(in_channels=out_channel, out_channels=out_channel,
                                kernel_size=3, stride=1, padding=1, bias=False)
+        # 第二个无需激活函数
         self.bn2 = nn.BatchNorm2d(out_channel)
         self.downsample = downsample
 
@@ -28,20 +29,20 @@ class BasicBlock(nn.Module):
         out = self.conv2(out)
         out = self.bn2(out)
 
-        out += identity
+        out += identity  # 捷径分支（残差）
         out = self.relu(out)
 
         return out
 
 
-class Bottleneck(nn.Module):
+class Bottleneck(nn.Module):  # 50层以上残差结构
     """
     注意：原论文中，在虚线残差结构的主分支上，第一个1x1卷积层的步距是2，第二个3x3卷积层步距是1。
     但在pytorch官方实现过程中是第一个1x1卷积层的步距是1，第二个3x3卷积层步距是2，
     这么做的好处是能够在top1上提升大概0.5%的准确率。
     可参考Resnet v1.5 https://ngc.nvidia.com/catalog/model-scripts/nvidia:resnet_50_v1_5_for_pytorch
     """
-    expansion = 4
+    expansion = 4  # 由于第三个卷积核个数为前面的四倍，所以为4
 
     def __init__(self, in_channel, out_channel, stride=1, downsample=None,
                  groups=1, width_per_group=64):
@@ -57,7 +58,7 @@ class Bottleneck(nn.Module):
                                kernel_size=3, stride=stride, bias=False, padding=1)
         self.bn2 = nn.BatchNorm2d(width)
         # -----------------------------------------
-        self.conv3 = nn.Conv2d(in_channels=width, out_channels=out_channel*self.expansion,
+        self.conv3 = nn.Conv2d(in_channels=width, out_channels=out_channel*self.expansion,  # 乘以4
                                kernel_size=1, stride=1, bias=False)  # unsqueeze channels
         self.bn3 = nn.BatchNorm2d(out_channel*self.expansion)
         self.relu = nn.ReLU(inplace=True)
@@ -85,15 +86,15 @@ class Bottleneck(nn.Module):
         return out
 
 
-class ResNet(nn.Module):
+class ResNet(nn.Module):  # 整体网络主体部分
 
     def __init__(self,
-                 block,
-                 blocks_num,
-                 num_classes=1000,
+                 block,  # 用以定义层数对应的函数
+                 blocks_num,  # 层数的每个层组的卷积核个数
+                 num_classes=1000,  # 训练集分类个数
                  include_top=True,
                  groups=1,
-                 width_per_group=64):
+                 width_per_group=64):  # 输入特征矩阵深度
         super(ResNet, self).__init__()
         self.include_top = include_top
         self.in_channel = 64
@@ -106,7 +107,7 @@ class ResNet(nn.Module):
         self.bn1 = nn.BatchNorm2d(self.in_channel)
         self.relu = nn.ReLU(inplace=True)
         self.maxpool = nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
-        self.layer1 = self._make_layer(block, 64, blocks_num[0])
+        self.layer1 = self._make_layer(block, 64, blocks_num[0])  # 层组
         self.layer2 = self._make_layer(block, 128, blocks_num[1], stride=2)
         self.layer3 = self._make_layer(block, 256, blocks_num[2], stride=2)
         self.layer4 = self._make_layer(block, 512, blocks_num[3], stride=2)
@@ -118,7 +119,7 @@ class ResNet(nn.Module):
             if isinstance(m, nn.Conv2d):
                 nn.init.kaiming_normal_(m.weight, mode='fan_out', nonlinearity='relu')
 
-    def _make_layer(self, block, channel, block_num, stride=1):
+    def _make_layer(self, block, channel, block_num, stride=1):  # channel是第一层
         downsample = None
         if stride != 1 or self.in_channel != channel * block.expansion:
             downsample = nn.Sequential(

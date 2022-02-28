@@ -103,11 +103,11 @@ class GoogLeNet(nn.Module):
                 nn.init.constant_(m.bias, 0)
 
 
-class Inception(nn.Module):
+class Inception(nn.Module):  # inception结构层
     def __init__(self, in_channels, ch1x1, ch3x3red, ch3x3, ch5x5red, ch5x5, pool_proj):
         super(Inception, self).__init__()
-
-        self.branch1 = BasicConv2d(in_channels, ch1x1, kernel_size=1)
+        # 查看视频图片，对应其表格
+        self.branch1 = BasicConv2d(in_channels, ch1x1, kernel_size=1)  # 卷积核为1，使得减少维度
 
         self.branch2 = nn.Sequential(
             BasicConv2d(in_channels, ch3x3red, kernel_size=1),
@@ -134,10 +134,10 @@ class Inception(nn.Module):
         return torch.cat(outputs, 1)
 
 
-class InceptionAux(nn.Module):
+class InceptionAux(nn.Module):  # 辅助分类器
     def __init__(self, in_channels, num_classes):
         super(InceptionAux, self).__init__()
-        self.averagePool = nn.AvgPool2d(kernel_size=5, stride=3)
+        self.averagePool = nn.AvgPool2d(kernel_size=5, stride=3)   # 平均池化
         self.conv = BasicConv2d(in_channels, 128, kernel_size=1)  # output[batch, 128, 4, 4]
 
         self.fc1 = nn.Linear(2048, 1024)
@@ -149,8 +149,8 @@ class InceptionAux(nn.Module):
         # aux1: N x 512 x 4 x 4, aux2: N x 528 x 4 x 4
         x = self.conv(x)
         # N x 128 x 4 x 4
-        x = torch.flatten(x, 1)
-        x = F.dropout(x, 0.5, training=self.training)
+        x = torch.flatten(x, 1)   # 特征矩阵进行展平
+        x = F.dropout(x, 0.5, training=self.training)  # training中bowl值
         # N x 2048
         x = F.relu(self.fc1(x), inplace=True)
         x = F.dropout(x, 0.5, training=self.training)
@@ -160,7 +160,7 @@ class InceptionAux(nn.Module):
         return x
 
 
-class BasicConv2d(nn.Module):
+class BasicConv2d(nn.Module):  # 继承module，用来简化，因为每个都有卷积层和激活函数
     def __init__(self, in_channels, out_channels, **kwargs):
         super(BasicConv2d, self).__init__()
         self.conv = nn.Conv2d(in_channels, out_channels, **kwargs)
