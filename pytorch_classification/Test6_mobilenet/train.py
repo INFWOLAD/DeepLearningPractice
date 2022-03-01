@@ -4,9 +4,9 @@ import json
 
 import torch
 import torch.nn as nn
-import torch.optim as optim
-from torchvision import transforms, datasets
-from tqdm import tqdm
+import torch.optim as optim  # 实现了各种优化算法
+from torchvision import transforms, datasets  # https://blog.csdn.net/qq_33590958/article/details/102602029
+from tqdm import tqdm  # 可视化当前网络训练
 
 from model_v2 import MobileNetV2
 
@@ -15,15 +15,15 @@ def main():
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     print("using {} device.".format(device))
 
-    batch_size = 16
-    epochs = 5
+    batch_size = 16  # 一次训练所选取的样本数
+    epochs = 5   # 五个epochs进程
 
-    data_transform = {
+    data_transform = {  # transform从torchvision导入
         "train": transforms.Compose([transforms.RandomResizedCrop(224),
                                      transforms.RandomHorizontalFlip(),
                                      transforms.ToTensor(),
                                      transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])]),
-        "val": transforms.Compose([transforms.Resize(256),
+        "val": transforms.Compose([transforms.Resize(256),  # 验证过程
                                    transforms.CenterCrop(224),
                                    transforms.ToTensor(),
                                    transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])])}
@@ -32,14 +32,14 @@ def main():
     image_path = os.path.join(data_root, "data_set", "flower_data")  # flower data set path
     assert os.path.exists(image_path), "{} path does not exist.".format(image_path)
     train_dataset = datasets.ImageFolder(root=os.path.join(image_path, "train"),
-                                         transform=data_transform["train"])
+                                         transform=data_transform["train"])  # 图像预处理
     train_num = len(train_dataset)
 
     # {'daisy':0, 'dandelion':1, 'roses':2, 'sunflower':3, 'tulips':4}
     flower_list = train_dataset.class_to_idx
-    cla_dict = dict((val, key) for key, val in flower_list.items())
+    cla_dict = dict((val, key) for key, val in flower_list.items())  # 进行key和value的翻转，方便后期查询
     # write dict into json file
-    json_str = json.dumps(cla_dict, indent=4)
+    json_str = json.dumps(cla_dict, indent=4)  # https://www.cnblogs.com/shafir/p/8000127.html
     with open('class_indices.json', 'w') as json_file:
         json_file.write(json_str)
 
@@ -77,26 +77,26 @@ def main():
     for param in net.features.parameters():
         param.requires_grad = False
 
-    net.to(device)
+    net.to(device)  # 判断设备
 
     # define loss function
     loss_function = nn.CrossEntropyLoss()
 
     # construct an optimizer
     params = [p for p in net.parameters() if p.requires_grad]
-    optimizer = optim.Adam(params, lr=0.0001)
+    optimizer = optim.Adam(params, lr=0.0001)  # https://baijiahao.baidu.com/s?id=1668617930732883837&wfr=spider&for=pc
 
     best_acc = 0.0
     save_path = './MobileNetV2.pth'
     train_steps = len(train_loader)
     for epoch in range(epochs):
         # train
-        net.train()
+        net.train()  # 判断是否使用GPU
         running_loss = 0.0
-        train_bar = tqdm(train_loader, file=sys.stdout)
-        for step, data in enumerate(train_bar):
+        train_bar = tqdm(train_loader, file=sys.stdout)  # 进度条
+        for step, data in enumerate(train_bar):  # python固有函数 https://www.runoob.com/python/python-func-enumerate.html
             images, labels = data
-            optimizer.zero_grad()
+            optimizer.zero_grad()  # 清除过去的梯度
             logits = net(images.to(device))
             loss = loss_function(logits, labels.to(device))
             loss.backward()
